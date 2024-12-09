@@ -1,4 +1,4 @@
-"use client";
+"use client"
 import { useState } from "react";
 import Header from "./components/Header";
 import ShortenerForm from "./components/ShortenerForm";
@@ -11,6 +11,10 @@ export default function Home() {
   const [shortUrl, setShortUrl] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false); // State to toggle QR code visibility
+  const [loading, setLoading] = useState(false); // State for loading status
+  const [error, setError] = useState(""); // State for error message
+  const [copiedMessage, setCopiedMessage] = useState(""); // State to show copy confirmation message
+  const [shareError, setShareError] = useState(""); // State to show share error message
 
   // Function to toggle dark mode
   const toggleDarkMode = () => {
@@ -19,14 +23,22 @@ export default function Home() {
 
   const handleShorten = async (longUrl) => {
     const url = `https://tinyurl.com/api-create.php?url=${longUrl}`;
+    setLoading(true); // Set loading state to true when starting the request
+    setError(""); // Clear any previous errors
 
     try {
       const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Failed to shorten URL");
+      }
+
       const shortUrl = await response.text();
       setShortUrl(shortUrl);
       setHistory([{ longUrl, shortUrl }, ...history]);
-    } catch {
-      alert("Failed to shorten URL");
+    } catch (err) {
+      setError("Failed to shorten URL. Please try another URL.");
+    } finally {
+      setLoading(false); // Set loading state to false when the request is done
     }
   };
 
@@ -36,8 +48,14 @@ export default function Home() {
 
   // Button handlers
   const handleCopy = () => {
-    navigator.clipboard.writeText(shortUrl);
-    alert("URL copied to clipboard!");
+    navigator.clipboard.writeText(shortUrl)
+      .then(() => {
+        setCopiedMessage("URL copied to clipboard!");
+        setTimeout(() => setCopiedMessage(""), 2000); // Clear the message after 2 seconds
+      })
+      .catch(() => {
+        setCopiedMessage("Failed to copy URL.");
+      });
   };
 
   const handleShare = () => {
@@ -47,9 +65,11 @@ export default function Home() {
           title: "Shortened URL",
           url: shortUrl,
         })
-        .catch((err) => alert("Failed to share URL"));
+        .catch(() => {
+          setShareError("Failed to share URL.");
+        });
     } else {
-      alert("Share functionality not supported on this device");
+      setShareError("Share functionality not supported on this device.");
     }
   };
 
@@ -67,7 +87,22 @@ export default function Home() {
       <main className="flex flex-col items-center p-4">
         <ShortenerForm onShorten={handleShorten} />
 
-        {shortUrl && (
+        {/* Display Loading Indicator */}
+        {loading && (
+          <div className="mt-6 w-full max-w-md p-6 bg-gradient-to-r from-[#1f2a38] to-[#3a4a60] rounded-lg shadow-2xl text-center">
+            <p className="text-xl sm:text-2xl text-white font-semibold">Shortening your URL...</p>
+          </div>
+        )}
+
+        {/* Display Error Message */}
+        {error && (
+          <div className="mt-6 w-full max-w-md p-6 bg-red-500 text-white rounded-lg shadow-2xl text-center">
+            <p className="text-xl sm:text-2xl font-semibold">{error}</p>
+          </div>
+        )}
+
+        {/* Display Shortened URL */}
+        {shortUrl && !loading && (
           <div className="mt-6 w-full max-w-md p-6 bg-gradient-to-r from-[#1f2a38] to-[#3a4a60] rounded-lg shadow-2xl text-center transition-all duration-500 ease-in-out transform hover:scale-105 hover:shadow-3xl">
             <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">
               Shortened URL:
@@ -129,15 +164,27 @@ export default function Home() {
           </div>
         )}
 
+        {/* Display Copy Confirmation Message */}
+        {copiedMessage && (
+          <div className="mt-4 text-green-500 text-center">{copiedMessage}</div>
+        )}
+
+        {/* Display Share Error Message */}
+        {shareError && (
+          <div className="mt-4 text-red-500 text-center">{shareError}</div>
+        )}
+
         {/* Display QR Code if visible */}
         {showQRCode && shortUrl && (
           <div className="mt-6 w-full max-w-md p-6 bg-gradient-to-r from-[#1f2a38] to-[#3a4a60] rounded-lg shadow-2xl text-center flex justify-center items-center text-white font-bold ">
             <QRCodeDisplay shortUrl={shortUrl} />
           </div>
         )}
- {shortUrl && (
-        <History history={history} onDelete={handleDelete} />
- )}
+
+        {/* Display History */}
+        {shortUrl && (
+          <History history={history} onDelete={handleDelete} />
+        )}
       </main>
     </div>
   );
