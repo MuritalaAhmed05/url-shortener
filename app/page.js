@@ -1,101 +1,144 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+import Header from "./components/Header";
+import ShortenerForm from "./components/ShortenerForm";
+import History from "./components/History";
+import QRCodeDisplay from "./components/QRCodeDisplay";
+import { FaCopy, FaShareAlt, FaExternalLinkAlt, FaMoon, FaSun, FaQrcode } from "react-icons/fa"; // Import QR Code icon
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [history, setHistory] = useState([]);
+  const [shortUrl, setShortUrl] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false); // State to toggle QR code visibility
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+  // Function to toggle dark mode
+  const toggleDarkMode = () => {
+    setIsDarkMode((prevMode) => !prevMode);
+  };
+
+  const handleShorten = async (longUrl) => {
+    const url = `https://tinyurl.com/api-create.php?url=${longUrl}`;
+
+    try {
+      const response = await fetch(url);
+      const shortUrl = await response.text();
+      setShortUrl(shortUrl);
+      setHistory([{ longUrl, shortUrl }, ...history]);
+    } catch {
+      alert("Failed to shorten URL");
+    }
+  };
+
+  const handleDelete = (index) => {
+    setHistory(history.filter((_, i) => i !== index));
+  };
+
+  // Button handlers
+  const handleCopy = () => {
+    navigator.clipboard.writeText(shortUrl);
+    alert("URL copied to clipboard!");
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator
+        .share({
+          title: "Shortened URL",
+          url: shortUrl,
+        })
+        .catch((err) => alert("Failed to share URL"));
+    } else {
+      alert("Share functionality not supported on this device");
+    }
+  };
+
+  const handleVisit = () => {
+    window.open(shortUrl, "_blank");
+  };
+
+  const toggleQRCode = () => {
+    setShowQRCode((prev) => !prev); // Toggle the visibility of the QR code
+  };
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-white">
+      <Header onToggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+      <main className="flex flex-col items-center p-4">
+        <ShortenerForm onShorten={handleShorten} />
+
+        {shortUrl && (
+          <div className="mt-6 w-full max-w-md p-6 bg-gradient-to-r from-[#1f2a38] to-[#3a4a60] rounded-lg shadow-2xl text-center transition-all duration-500 ease-in-out transform hover:scale-105 hover:shadow-3xl">
+            <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">
+              Shortened URL:
+            </h2>
+            <p className="text-xl sm:text-2xl text-blue-400 font-semibold">
+              {shortUrl}
+            </p>
+            <div className="flex justify-center space-x-4 mt-6">
+              <div className="relative group">
+                <button
+                  onClick={handleCopy}
+                  className="p-3 rounded-full text-white bg-blue-500 hover:bg-blue-400 transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-xl"
+                  aria-label="Copy URL"
+                >
+                  <FaCopy size={20} />
+                </button>
+                <span className="text-nowrap absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-700 text-white text-sm rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  Copy URL
+                </span>
+              </div>
+              <div className="relative group">
+                <button
+                  onClick={handleShare}
+                  className="p-3 rounded-full text-white bg-green-500 hover:bg-green-400 transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-xl"
+                  aria-label="Share URL"
+                >
+                  <FaShareAlt size={20} />
+                </button>
+                <span className="text-nowrap absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-700 text-white text-sm rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  Share URL
+                </span>
+              </div>
+              <div className="relative group">
+                <button
+                  onClick={handleVisit}
+                  className="p-3 rounded-full text-white bg-yellow-500 hover:bg-yellow-400 transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-xl"
+                  aria-label="Visit Website"
+                >
+                  <FaExternalLinkAlt size={20} />
+                </button>
+                <span className="text-nowrap absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-700 text-white text-sm rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  Visit Website
+                </span>
+              </div>
+              {/* QR Code Button */}
+              <div className="relative group">
+                <button
+                  onClick={toggleQRCode} // Toggle QR code visibility
+                  className="p-3 rounded-full text-white bg-purple-500 hover:bg-purple-400 transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-xl"
+                  aria-label="Show QR Code"
+                >
+                  <FaQrcode size={20} />
+                </button>
+                <span className="text-nowrap absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-700 text-white text-sm rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  Show QR Code
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Display QR Code if visible */}
+        {showQRCode && shortUrl && (
+          <div className="mt-6 w-full max-w-md p-6 bg-gradient-to-r from-[#1f2a38] to-[#3a4a60] rounded-lg shadow-2xl text-center flex justify-center items-center text-white font-bold ">
+            <QRCodeDisplay shortUrl={shortUrl} />
+          </div>
+        )}
+ {shortUrl && (
+        <History history={history} onDelete={handleDelete} />
+ )}
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
